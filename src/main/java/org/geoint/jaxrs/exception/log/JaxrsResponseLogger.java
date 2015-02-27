@@ -1,5 +1,8 @@
 package org.geoint.jaxrs.exception.log;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 import java.util.logging.Filter;
 import java.util.logging.Handler;
 import java.util.logging.Level;
@@ -7,6 +10,7 @@ import java.util.logging.LogManager;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import javax.ws.rs.core.Response;
+import org.geoint.jaxrs.exception.http.HttpErrorEntity;
 
 /**
  * Logs a {@link Response} such that it is traceable between client and server
@@ -84,9 +88,24 @@ public class JaxrsResponseLogger extends Logger {
         }
     }
 
-    public void log(Response response, Throwable ex) {
-        //TODO create JaxrsExceptionLogRecord
+    private Level getLevelFromStatus(int statusCode) {
+        if (statusCode >= 400 && statusCode < 500) {
+            return clientLogger.getLevel();
+        } else if (statusCode >= 300 && statusCode < 400) {
+            return redirectLogger.getLevel();
+        } else {
+            return serverLogger.getLevel();
+        }
+    }
 
+    /*
+     * we should only get here if this logger is used generically (not 
+     * with a JaxrsExceptionLogRecord).  In this case, we'll log to the 
+     * parent logger, not to a specific http logger
+     */
+    @Override
+    public void log(LogRecord record) {
+        parentLogger.log(record);
     }
 
     @Override
@@ -137,14 +156,6 @@ public class JaxrsResponseLogger extends Logger {
     @Override
     public void setParent(Logger parent) {
         parentLogger.setParent(parent);
-    }
-
-    @Override
-    public void log(LogRecord record) {
-        //we should only get here if this logger is used generically (not 
-        //with a JaxrsExceptionLogRecord).  In this case, we'll log to the 
-        //parent logger, not to a specific http logger
-        parentLogger.log(record);
     }
 
     /**

@@ -14,14 +14,50 @@ public class JaxrsExceptionLogRecord extends LogRecord {
     private String uuid;
     private String userId;
     private String sessionId;
+    private String resourceUrl;
+    private String httpMethod;
 
-    public JaxrsExceptionLogRecord(Level level, int statusCode, String uuid,
-            String userId, String sessionId, String msg) {
+    public JaxrsExceptionLogRecord(Level level, String msg) {
+        super(level, msg);
+    }
+
+    public JaxrsExceptionLogRecord(Level level, String msg, int statusCode,
+            String userId, String sessionId, String resourceUrl,
+            String httpMethod) {
+        super(level, msg);
+        this.statusCode = statusCode;
+        this.userId = userId;
+        this.sessionId = sessionId;
+        this.resourceUrl = resourceUrl;
+        this.httpMethod = httpMethod;
+    }
+
+    public JaxrsExceptionLogRecord(Level level, String msg, String uuid,
+            int statusCode, String userId, String sessionId, String resourceUrl,
+            String httpMethod) {
         super(level, msg);
         this.statusCode = statusCode;
         this.uuid = uuid;
         this.userId = userId;
         this.sessionId = sessionId;
+        this.resourceUrl = resourceUrl;
+        this.httpMethod = httpMethod;
+    }
+
+    public String getResourceUrl() {
+        return resourceUrl;
+    }
+
+    public void setResourceUrl(String resourceUrl) {
+        this.resourceUrl = resourceUrl;
+    }
+
+    public String getHttpMethod() {
+        return httpMethod;
+    }
+
+    public void setHttpMethod(String httpMethod) {
+        this.httpMethod = httpMethod;
     }
 
     public int getStatusCode() {

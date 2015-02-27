@@ -2,6 +2,7 @@ package org.geoint.jaxrs.exception.mapper;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
 import javax.inject.Inject;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
@@ -10,6 +11,7 @@ import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 import org.geoint.jaxrs.exception.http.HttpErrorEntity;
+import org.geoint.jaxrs.exception.log.JaxrsExceptionLogRecord;
 import org.geoint.jaxrs.exception.log.JaxrsResponseLogger;
 
 /**
@@ -26,13 +28,13 @@ public class ThrowableMapper implements ExceptionMapper<Throwable> {
     private static final String DEFAULT_MESSAGE = "We're currently experiencing "
             + "problems satisfying requests, please try again later.";
     private static final HttpErrorEntity DEFAULT_ENTITY;
-    private static final Map<Class<? extends Throwable>, HttpErrorEntity> throwableEntity;
+    private static final Map<Class<? extends Throwable>, Integer> throwableStatus;
     private static final JaxrsResponseLogger logger
             = JaxrsResponseLogger.instance();
 
     static {
         //load throwable config from file
-        throwableEntity = new HashMap<>();
+        throwableStatus = new HashMap<>();
         //TODO
 
         DEFAULT_ENTITY = new HttpErrorEntity(DEFAULT_STATUS_CODE, DEFAULT_MESSAGE);
@@ -55,6 +57,10 @@ public class ThrowableMapper implements ExceptionMapper<Throwable> {
                 .entity(entity)
                 .build();
 
+        JaxrsExceptionLogRecord record
+                = new JaxrsExceptionLogRecord(Level.WARNING, message,
+                        response.getStatus(), userId, sessionId, resourceUrl,
+                        httpMethod);
         logger.log(response, e);
 
         return response;
