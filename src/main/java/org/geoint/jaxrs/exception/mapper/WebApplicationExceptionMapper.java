@@ -1,6 +1,9 @@
 package org.geoint.jaxrs.exception.mapper;
 
+import java.util.logging.Level;
 import javax.inject.Inject;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
@@ -9,6 +12,7 @@ import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.ws.rs.ext.Provider;
 import org.geoint.jaxrs.exception.http.HttpErrorEntity;
+import org.geoint.jaxrs.exception.log.JaxrsExceptionLogRecord;
 import org.geoint.jaxrs.exception.log.JaxrsResponseLogger;
 
 /**
@@ -24,28 +28,39 @@ import org.geoint.jaxrs.exception.log.JaxrsResponseLogger;
 public class WebApplicationExceptionMapper
         implements ExceptionMapper<WebApplicationException> {
 
-    //JAX-RS injected information
     @Inject
     UriInfo uriInfo;
     @Inject
     SecurityContext securityContext;
     @Inject
+    HttpSession session;
+    @Inject
     HttpHeaders headers;
+    @Inject
+    HttpServletRequest request;
 
     private static final JaxrsResponseLogger logger
             = JaxrsResponseLogger.instance();
 
     @Override
     public Response toResponse(WebApplicationException e) {
-        Response response = e.getResponse();
 
-        if (response.getEntity() == null
-                || !response.getEntity().getClass().equals(HttpErrorEntity.class)) {
-            final Response oldResponse = e.getResponse();
-            response = Response.status(oldResponse.getStatus())
-                    .
-        }
-        logger.log(response, e);
+        JaxrsExceptionLogRecord record
+                = new JaxrsExceptionLogRecord(Level.WARNING, "There was a problem while attempting to process a REST request",
+                        e.getResponse().getStatus(),
+                        securityContext.getUserPrincipal().getName(),
+                        session.getId(),
+                        uriInfo.getAbsolutePath().toString(),
+                        request.getMethod(),
+                        e);
+
+        Response response = e.getResponse()
+                .status(e.getResponse().getStatus())
+                .entity(String.format("[%s] %s", record.getUuid(), record.getMessage()))
+                .build();
+
+        logger.log(record);
+
         return response;
     }
 
