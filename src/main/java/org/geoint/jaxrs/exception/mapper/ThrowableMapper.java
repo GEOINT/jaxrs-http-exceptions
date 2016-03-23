@@ -4,6 +4,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
 import javax.inject.Inject;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
@@ -24,45 +26,45 @@ import org.geoint.jaxrs.exception.log.JaxrsResponseLogger;
 @Provider
 public class ThrowableMapper implements ExceptionMapper<Throwable> {
 
-    private static final int DEFAULT_STATUS_CODE = 500;
+    private static final int DEFAULT_STATUS_CODE = Response.Status.INTERNAL_SERVER_ERROR.getStatusCode();
     private static final String DEFAULT_MESSAGE = "We're currently experiencing "
             + "problems satisfying requests, please try again later.";
     private static final HttpErrorEntity DEFAULT_ENTITY;
-    private static final Map<Class<? extends Throwable>, Integer> throwableStatus;
     private static final JaxrsResponseLogger logger
             = JaxrsResponseLogger.instance();
 
     static {
-        //load throwable config from file
-        throwableStatus = new HashMap<>();
-        //TODO
-
         DEFAULT_ENTITY = new HttpErrorEntity(DEFAULT_STATUS_CODE, DEFAULT_MESSAGE);
     }
 
-    //JAX-RS injected information
     @Inject
     UriInfo uriInfo;
     @Inject
     SecurityContext securityContext;
     @Inject
+    HttpSession session;
+    @Inject
     HttpHeaders headers;
-    
+    @Inject
+    HttpServletRequest request;
+
     @Override
     public Response toResponse(Throwable e) {
-        final HttpErrorEntity entity
-                = throwableEntity.getOrDefault(e.getClass(), DEFAULT_ENTITY);
-
-        final Response response = Response.status(entity.getStatusCode())
-                .entity(entity)
-                .build();
 
         JaxrsExceptionLogRecord record
-                = new JaxrsExceptionLogRecord(Level.WARNING, message,
-                        response.getStatus(), userId, sessionId, resourceUrl,
-                        httpMethod);
-        logger.log(response, e);
+                = new JaxrsExceptionLogRecord(Level.WARNING, "An unknown error occurred. Please try again later.",
+                        DEFAULT_STATUS_CODE,
+                        securityContext.getUserPrincipal().getName(),
+                        session.getId(),
+                        uriInfo.getAbsolutePath().toString(),
+                        request.getMethod(),
+                        e);
 
+        final Response response = Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(String.format("[%s] %s", record.getUuid(), record.getMessage()))
+                .build();
+
+        logger.log(record);
         return response;
     }
 
